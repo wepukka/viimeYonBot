@@ -1,0 +1,102 @@
+require("dotenv").config();
+
+const { Client, GatewayIntentBits } = require("discord.js");
+
+const { currentDay } = require("./utils");
+const viimeyoSchema = require("./mongooseSchema");
+const schedule = require("node-schedule");
+const database = require("./mongoose");
+const axios = require("axios");
+
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.GuildVoiceStates,
+  ],
+});
+
+// Fetch video urls from youtube API
+const fetchVideosFromApi = async () => {
+  let midnight = currentDay() + "T00:00:00Z";
+  let videoArray = [];
+  let url = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&type=video&part=snippet&channelId=UCZtDQulSu6Ar7X6B_5SftTQ&maxResults=10&order=date&publishedAfter=${midnight}`;
+  await axios.get(url).then((response) => {
+    const data = response.data;
+    data.items.map((data) => {
+      videoArray.push(data.id.videoId);
+    });
+  });
+  return videoArray;
+};
+
+// Fetch video urls from database
+const fetchVideosFromDb = async () => {
+  let videos = await viimeyoSchema.find({});
+
+  return videos.length === 0 ? [] : videos[0].videos;
+};
+
+// Post video to channel
+const postVideoToChannel = async (channel, id) => {
+  await channel.send(
+    "https://youtube.com/watch?v=" + id + "&ab_channel=Viimeyönänärit"
+  );
+  console.log("New video posted");
+};
+
+// Save video schema
+const saveToDb = async (videos) => {
+  new viimeyoSchema({ videos: videos })
+    .save()
+    .then(() => {
+      console.log("Videos saved");
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+};
+
+const postVideos = async () => {
+  const channel = await client.channels.fetch(process.env.CHANNEL_ID);
+  let newVideoBool = false;
+  let oldVideos = await fetchVideosFromDb();
+  let newVideos = await fetchVideosFromApi();
+
+  for (i in newVideos) {
+    let newVideo = newVideos[i];
+
+    // IF new video is not in database, post to channel //
+    if (!oldVideos.includes(newVideo)) {
+      newVideoBool = true;
+
+      await postVideoToChannel(channel, newVideo);
+    }
+  }
+
+  // IF new video is posted, update database with new video array //
+  if (newVideoBool) {
+    await viimeyoSchema.deleteMany({});
+    await saveToDb(newVideos);
+  }
+};
+
+// Check for new videos every hour
+const viimeYo = new schedule.RecurrenceRule();
+viimeYo.minute = 0;
+
+schedule.scheduleJob(viimeYo, function () {
+  postVideos();
+});
+
+client.once("ready", () => {
+  client.user.setPresence({
+    activities: [{ name: "Searching for new videos" }],
+  });
+  database.connect();
+});
+
+client.login(process.env.BOT_TOKEN);
