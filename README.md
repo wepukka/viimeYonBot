@@ -1,5 +1,5 @@
 # viimeYonBot
-Discordbot to post new videos to my friend groups discord channel from [Viimeyonanarit](https://www.youtube.com/channel/UCZtDQulSu6Ar7X6B_5SftTQ) youtube channel.
+Simple Discordbot to post new videos to my friend groups discord channel from [Viimeyonanarit](https://www.youtube.com/channel/UCZtDQulSu6Ar7X6B_5SftTQ) youtube channel.
 
 Searches new videos every hour. Video urls are saved to mongodb and comparison between videos from youtube api and mongdodb is made to determine if fetched video is recently posted.
 
@@ -15,6 +15,8 @@ CHANNEL_ID = The channel id where you want videos to be posted
 DB_SRV = mongodb connection string
 
 YOUTUBE_API_KEY = apikey created in youtube developer 
+
+**You also need to have Node.js and npm installed & run "npm install" in source foulder** [Docs](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
 
 ### Links
 [YoutubeDeveloper](https://developers.google.com/youtube/v3)
