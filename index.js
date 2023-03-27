@@ -62,26 +62,30 @@ const saveToDb = async (videos) => {
 };
 
 const postVideos = async () => {
-  const channel = await client.channels.fetch(process.env.CHANNEL_ID);
-  let newVideoBool = false;
-  let oldVideos = await fetchVideosFromDb();
-  let newVideos = await fetchVideosFromApi();
+  try {
+    const channel = await client.channels.fetch(process.env.CHANNEL_ID);
+    let newVideoBool = false;
+    let oldVideos = await fetchVideosFromDb();
+    let newVideos = await fetchVideosFromApi();
 
-  for (i in newVideos) {
-    let newVideo = newVideos[i];
+    for (i in newVideos) {
+      let newVideo = newVideos[i];
 
-    // IF new video is not in database, post to channel //
-    if (!oldVideos.includes(newVideo)) {
-      newVideoBool = true;
+      // IF new video is not in database, post to channel //
+      if (!oldVideos.includes(newVideo)) {
+        newVideoBool = true;
 
-      await postYoutubeVideo(channel, newVideo);
+        await postYoutubeVideo(channel, newVideo);
+      }
     }
-  }
 
-  // IF new video is posted, update database with new video array //
-  if (newVideoBool) {
-    await viimeyoSchema.deleteMany({});
-    await saveToDb(newVideos);
+    // IF new video is posted, update database with new video array //
+    if (newVideoBool) {
+      await viimeyoSchema.deleteMany({});
+      await saveToDb(newVideos);
+    }
+  } catch (err) {
+    console.log(err);
   }
 };
 
@@ -96,36 +100,40 @@ schedule.scheduleJob(viimeYo, function () {
 // NHL RESULTS //
 
 const postResults = async () => {
-  const channel = await client.channels.fetch(process.env.CHANNEL_ID);
-  let games = await fetchLastNightGames();
+  try {
+    const channel = await client.channels.fetch(process.env.CHANNEL_ID);
+    let games = await fetchLastNightGames();
 
-  let nhlScores = previousDay("fi") + " - " + currentDay("fi");
+    let nhlScores = previousDay("fi") + " - " + currentDay("fi");
 
-  games.map((game) => {
-    // Extra strings to make team names same length, easier to check scores //
-    var homeEs = new Array(25 - game.home.name.length).join("-");
-    var awayEs = new Array(25 - game.away.name.length).join("-");
+    games.map((game) => {
+      // Extra strings to make team names same length, easier to check scores //
+      var homeEs = new Array(25 - game.home.name.length).join("-");
+      var awayEs = new Array(25 - game.away.name.length).join("-");
 
-    nhlScores +=
-      "\n\n" +
-      "HOME: " +
-      game.home.name +
-      homeEs +
-      " " +
-      game.home.score +
-      "   Current record: " +
-      `${game.home.record.wins}-${game.home.record.losses}-${game.home.record.ot}` +
-      "\n" +
-      "AWAY: " +
-      game.away.name +
-      awayEs +
-      " " +
-      game.away.score +
-      "   Current record: " +
-      `${game.away.record.wins}-${game.away.record.losses}-${game.away.record.ot}`;
-  });
+      nhlScores +=
+        "\n\n" +
+        "HOME: " +
+        game.home.name +
+        homeEs +
+        " " +
+        game.home.score +
+        "   Current record: " +
+        `${game.home.record.wins}-${game.home.record.losses}-${game.home.record.ot}` +
+        "\n" +
+        "AWAY: " +
+        game.away.name +
+        awayEs +
+        " " +
+        game.away.score +
+        "   Current record: " +
+        `${game.away.record.wins}-${game.away.record.losses}-${game.away.record.ot}`;
+    });
 
-  return channel.send("```" + nhlScores + "```");
+    return channel.send("```" + nhlScores + "```");
+  } catch (err) {
+    console.log(err);
+  }
 };
 
 const nhlResults = new schedule.RecurrenceRule();
