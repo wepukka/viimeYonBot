@@ -2,11 +2,12 @@ require("dotenv").config();
 
 const { Client, GatewayIntentBits } = require("discord.js");
 
-const { currentDay } = require("./utils");
+const { currentDay, previousDay } = require("./utils");
 const viimeyoSchema = require("./mongooseSchema");
 const schedule = require("node-schedule");
 const database = require("./mongoose");
 const axios = require("axios");
+const { fetchTodaysGames, fetchLastNightGames } = require("./nhlApi");
 
 const client = new Client({
   intents: [
@@ -41,7 +42,7 @@ const fetchVideosFromDb = async () => {
 };
 
 // Post video to channel
-const postVideoToChannel = async (channel, id) => {
+const postYoutubeVideo = async (channel, id) => {
   await channel.send(
     "https://youtube.com/watch?v=" + id + "&ab_channel=Viimeyönänärit"
   );
@@ -73,7 +74,7 @@ const postVideos = async () => {
     if (!oldVideos.includes(newVideo)) {
       newVideoBool = true;
 
-      await postVideoToChannel(channel, newVideo);
+      await postYoutubeVideo(channel, newVideo);
     }
   }
 
@@ -92,7 +93,49 @@ schedule.scheduleJob(viimeYo, function () {
   postVideos();
 });
 
-client.once("ready", () => {
+// NHL RESULTS //
+
+const postResults = async () => {
+  const channel = await client.channels.fetch(process.env.CHANNEL_ID);
+  let games = await fetchLastNightGames();
+
+  let nhlScores = previousDay("fi") + " - " + currentDay("fi");
+
+  games.map((game) => {
+    // Extra strings to make team names same length, easier to check scores //
+    var homeEs = new Array(25 - game.home.name.length).join("-");
+    var awayEs = new Array(25 - game.away.name.length).join("-");
+
+    nhlScores +=
+      "\n\n" +
+      "HOME: " +
+      game.home.name +
+      homeEs +
+      " " +
+      game.home.score +
+      "   Current record: " +
+      `${game.home.record.wins}-${game.home.record.losses}-${game.home.record.ot}` +
+      "\n" +
+      "AWAY: " +
+      game.away.name +
+      awayEs +
+      " " +
+      game.away.score +
+      "   Current record: " +
+      `${game.away.record.wins}-${game.away.record.losses}-${game.away.record.ot}`;
+  });
+
+  return channel.send("```" + nhlScores + "```");
+};
+
+const nhlResults = new schedule.RecurrenceRule();
+nhlResults.hour = 9;
+
+schedule.scheduleJob(nhlResults, function () {
+  postResults();
+});
+
+client.once("ready", async () => {
   client.user.setPresence({
     activities: [{ name: "Searching for new videos" }],
   });
