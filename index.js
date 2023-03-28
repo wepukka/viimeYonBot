@@ -138,6 +138,7 @@ const postResults = async () => {
 
 const nhlResults = new schedule.RecurrenceRule();
 nhlResults.hour = 9;
+nhlResults.minute = 0;
 
 schedule.scheduleJob(nhlResults, function () {
   postResults();
