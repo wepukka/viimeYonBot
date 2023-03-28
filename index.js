@@ -160,7 +160,6 @@ client.once("ready", async () => {
     activities: [{ name: "Searching for new videos" }],
   });
   database.connect();
-  postResults();
 });
 
 client.login(process.env.BOT_TOKEN);
