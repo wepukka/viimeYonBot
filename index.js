@@ -3,6 +3,7 @@ require("dotenv").config();
 const { Client, GatewayIntentBits } = require("discord.js");
 
 const { currentDay, previousDay } = require("./utils");
+const { textToBox } = require("./textUtils");
 const viimeyoSchema = require("./mongooseSchema");
 const schedule = require("node-schedule");
 const database = require("./mongoose");
@@ -104,33 +105,43 @@ const postResults = async () => {
     const channel = await client.channels.fetch(process.env.CHANNEL_ID);
     let games = await fetchLastNightGames();
 
-    let nhlScores = previousDay("fi") + " - " + currentDay("fi");
+    let dateRange = previousDay("fi") + " - " + currentDay("fi");
+    let nhlScores = dateRange;
+
+    if (games.length === 0) {
+      return channel.send(textToBox(nhlScores + "\n\n" + "NO GAMES FOUND"));
+    }
 
     games.map((game) => {
-      // Extra strings to make team names same length, easier to check scores //
-      var homeEs = new Array(25 - game.home.name.length).join("-");
-      var awayEs = new Array(25 - game.away.name.length).join("-");
+      // Extra strings to adjust scores to same position //
+      let homeEs = new Array(25 - game.home.name.length).join("-");
+      let awayEs = new Array(25 - game.away.name.length).join("-");
+
+      let homeName = game.home.name + homeEs;
+      let awayName = game.away.name + awayEs;
+
+      let homeScore = game.home.score;
+      let awayScore = game.away.score;
+
+      // Winner mark //
+      homeScore > awayScore
+        ? (homeScore = homeScore + " < W")
+        : (awayScore = awayScore + " < W");
 
       nhlScores +=
         "\n\n" +
         "HOME: " +
-        game.home.name +
-        homeEs +
+        homeName +
         " " +
-        game.home.score +
-        "   Current record: " +
-        `${game.home.record.wins}-${game.home.record.losses}-${game.home.record.ot}` +
+        homeScore +
         "\n" +
         "AWAY: " +
-        game.away.name +
-        awayEs +
+        awayName +
         " " +
-        game.away.score +
-        "   Current record: " +
-        `${game.away.record.wins}-${game.away.record.losses}-${game.away.record.ot}`;
+        awayScore;
     });
 
-    return channel.send("```" + nhlScores + "```");
+    return channel.send(textToBox(nhlScores));
   } catch (err) {
     console.log(err);
   }
@@ -149,6 +160,7 @@ client.once("ready", async () => {
     activities: [{ name: "Searching for new videos" }],
   });
   database.connect();
+  postResults();
 });
 
 client.login(process.env.BOT_TOKEN);
