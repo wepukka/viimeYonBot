@@ -8,7 +8,7 @@ const viimeyoSchema = require("./mongooseSchema");
 const schedule = require("node-schedule");
 const database = require("./mongoose");
 const axios = require("axios");
-const { fetchTodaysGames, fetchLastNightGames } = require("./nhlApi");
+const { fetchLastNightGames } = require("./nhlApi");
 
 const client = new Client({
   intents: [
@@ -23,17 +23,23 @@ const client = new Client({
 
 // Fetch video urls from youtube API
 const fetchVideosFromApi = async () => {
-  let midnight = currentDay() + "T00:00:00Z";
+  let midnightString = "T00%3A00%3A00Z";
+  let midnight = currentDay() + midnightString;
   let videoArray = [];
   let url = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&type=video&part=snippet&channelId=UCZtDQulSu6Ar7X6B_5SftTQ&maxResults=10&order=date&publishedAfter=${midnight}`;
+
   await axios.get(url).then((response) => {
     const data = response.data;
+
     data.items.map((data) => {
       videoArray.push(data.id.videoId);
     });
   });
+  /*   return videoArray */
   return videoArray;
 };
+
+// Check for new videos every hour
 
 // Fetch video urls from database
 const fetchVideosFromDb = async () => {
@@ -44,10 +50,14 @@ const fetchVideosFromDb = async () => {
 
 // Post video to channel
 const postYoutubeVideo = async (channel, id) => {
-  await channel.send(
-    "https://youtube.com/watch?v=" + id + "&ab_channel=Viimeyönänärit"
-  );
-  console.log("New video posted");
+  try {
+    await channel.send(
+      "https://youtube.com/watch?v=" + id + "&ab_channel=Viimeyönänärit"
+    );
+    console.log("New video posted");
+  } catch (e) {
+    console.log(e);
+  }
 };
 
 // Save video schema
@@ -68,6 +78,11 @@ const postVideos = async () => {
     let newVideoBool = false;
     let oldVideos = await fetchVideosFromDb();
     let newVideos = await fetchVideosFromApi();
+
+    /* 
+    console.log("new", newVideos);
+    console.log("old", oldVideos); 
+    */
 
     for (i in newVideos) {
       let newVideo = newVideos[i];

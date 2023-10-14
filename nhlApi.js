@@ -33,10 +33,3 @@ const fetchLastNightGames = async () => {
 };
 
 module.exports = { fetchLastNightGames };
-
-/*    console.log(game.teams.away.team.name);
-console.log(game.teams.away.leagueRecord);
-console.log(game.teams.away.score);
-console.log(game.teams.home.team.name);
-console.log(game.teams.home.leagueRecord);
-console.log(game.teams.home.score); */
